@@ -1,0 +1,77 @@
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from wordcloud import WordCloud, STOPWORDS
+import kagglehub
+
+# Step 1: Download Dataset
+path = kagglehub.dataset_download("uciml/sms-spam-collection-dataset")
+file_path = os.path.join(path, "spam.csv")
+
+# Step 2: Load Dataset
+df = pd.read_csv(file_path, encoding='latin-1')[['v1', 'v2']]
+df.columns = ['label', 'message']
+
+# Step 3: Add message length column
+df['length'] = df['message'].apply(len)
+
+# -----------------------------
+# 1. Distribution plot: Spam vs Ham
+# -----------------------------
+plt.figure(figsize=(6, 4))
+sns.countplot(x='label', data=df, palette='Set2')
+plt.title("Distribution of Spam vs Ham")
+plt.xlabel("Label")
+plt.ylabel("Count")
+plt.show()
+
+# -----------------------------
+# 2. Histogram of Message Lengths
+# -----------------------------
+plt.figure(figsize=(8, 5))
+sns.histplot(data=df, x='length', bins=50, hue='label', kde=True, palette='husl')
+plt.title("Histogram of Message Lengths by Label")
+plt.xlabel("Message Length")
+plt.ylabel("Frequency")
+plt.show()
+
+# -----------------------------
+# 3. Word Clouds
+# -----------------------------
+stopwords = set(STOPWORDS)
+
+# WordCloud for spam messages
+spam_words = " ".join(df[df['label'] == 'spam']['message'])
+spam_wc = WordCloud(stopwords=stopwords, background_color="white", max_words=200).generate(spam_words)
+
+# WordCloud for ham messages
+ham_words = " ".join(df[df['label'] == 'ham']['message'])
+ham_wc = WordCloud(stopwords=stopwords, background_color="white", max_words=200).generate(ham_words)
+
+# Plot spam WordCloud
+plt.figure(figsize=(10, 6))
+plt.imshow(spam_wc, interpolation='bilinear')
+plt.axis("off")
+plt.title("Word Cloud - Spam Messages")
+plt.show()
+
+# Plot ham WordCloud
+plt.figure(figsize=(10, 6))
+plt.imshow(ham_wc, interpolation='bilinear')
+plt.axis("off")
+plt.title("Word Cloud - Ham Messages")
+plt.show()
+
+# -----------------------------
+# 4. Statistical Insights
+# -----------------------------
+print("\nStatistical Summary:")
+print(df.groupby('label')['length'].describe())
+
+# Identify outliers (e.g., messages longer than 95th percentile)
+q95 = df['length'].quantile(0.95)
+outliers = df[df['length'] > q95]
+
+print(f"\nOutliers (length > 95th percentile = {q95:.0f} chars):")
+print(outliers[['label', 'message', 'length']].head())
